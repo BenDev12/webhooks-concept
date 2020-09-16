@@ -8,8 +8,13 @@ const PORT = process.env.PORT || 4040;
 const REDIS_URL = process.env.REDIS_URL || "redis://127.0.0.1:6379";
 const publisher = redis.createClient();
 
+const countJob = {
+  count_to: 700,
+  response_type: "webhook",
+};
+
 // new worker
-const newJoby = new Queue("work", REDIS_URL);
+const newJob = new Queue("work", REDIS_URL);
 // functions
 const getNotification = async (req, res, next) => {
   try {
@@ -24,16 +29,22 @@ const getNotification = async (req, res, next) => {
 
 const acceptJobs = async (req, res, next) => {
   try {
-    const countJob = {
-      count_to: 700,
-      response_type: "webhook",
-    };
-    if (countJob.response_type === "webhook") {
-      console.log("this job response type is a webhook");
-      publisher.publish("webhooks", JSON.stringify(countJob));
-      res.json({ message: "pending" });
+    const countJobs = [
+      {
+        count_to: 700,
+        response_type: "webhook",
+      },
+      {
+        count_to: 400,
+        response_type: "job queue",
+      },
+    ];
+    if (countJobs.some((job) => job.response_type == "webhook")) {
+      countJobs.push({ webhook_url: "http://localhost:4040/webhook" });
+      publisher.publish("webhooks", JSON.stringify(countJobs));
+      return res.json({ message: "status_pending" });
     } else {
-      console.log("this is job response type is not a webhook");
+      console.log("false");
     }
   } catch (error) {
     return res.status(500).json({ message: error.message });
